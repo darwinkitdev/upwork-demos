@@ -157,21 +157,17 @@
 
 @end
 
-// Custom button to draw a tinted image, since the default
-// implementation doesn't seem to work on the menu bar button.
-@interface TintedButton : NSButton
-@end
+@implementation NSImage (Tint)
 
-@implementation TintedButton
-
-- (void)drawRect:(NSRect)dirtyRect {
-    if (self.isHighlighted) {
-        [[self.contentTintColor colorWithSystemEffect:NSColorSystemEffectDeepPressed] setFill];
-    } else {
-        [self.contentTintColor setFill];
-    }
-    NSRectFill(dirtyRect);
-    [self.image drawAtPoint:NSZeroPoint fromRect:NSZeroRect operation:NSCompositingOperationDestinationAtop fraction:1];
+- (NSImage *)imageWithTintColor:(NSColor *)tintColor {
+    NSImage *image = [self copy];
+    [image lockFocus];
+    [tintColor setFill];
+    NSRect imageRect = {.origin = NSZeroPoint, .size = image.size};
+    NSRectFillUsingOperation(imageRect, NSCompositingOperationSourceAtop);
+    [image unlockFocus];
+    image.template = NO;
+    return image;
 }
 
 @end
@@ -193,12 +189,6 @@
     NSArray *constraints;
 }
 
-- (instancetype)init {
-    if (self = [super init]) {
-        [self setup];
-    }
-    return self;
-}
 - (void)setup {
     micImage = [NSImage imageWithSystemSymbolName:@"music.mic"
                          accessibilityDescription:nil];
@@ -213,12 +203,12 @@
     timeLabel = [NSTextField labelWithString:@"00:00"];
     timeLabel.font = [NSFont monospacedDigitSystemFontOfSize:statusItem.button.font.pointSize
                                                       weight:NSFontWeightRegular];
-    NSButton *stopButton = [TintedButton buttonWithImage:[NSImage imageWithSystemSymbolName:@"record.circle"
-                                                         accessibilityDescription:nil]
-                                        target:self
-                                        action:@selector(toggleRecording:)];
+    NSImage *recordImage = [[NSImage imageWithSystemSymbolName:@"record.circle"
+                                      accessibilityDescription:nil] imageWithTintColor:NSColor.redColor];
+    NSButton *stopButton = [NSButton buttonWithImage:recordImage
+                                              target:self
+                                              action:@selector(toggleRecording:)];
     stopButton.bordered = NO;
-    stopButton.contentTintColor = NSColor.redColor;
     statusView = [NSStackView stackViewWithViews:@[timeLabel, stopButton]];
     
     constraints = @[
@@ -401,6 +391,7 @@ int main(int argc, const char * argv[]) {
         NSApplication *app = NSApplication.sharedApplication;
         app.activationPolicy = NSApplicationActivationPolicyAccessory;
         AudioSnap *audioSnap = [AudioSnap new];
+        [audioSnap setup];
         [app run];
     }
     return EXIT_SUCCESS;
