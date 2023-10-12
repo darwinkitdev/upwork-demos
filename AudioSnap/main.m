@@ -18,52 +18,6 @@
 
 @implementation AudioInputDevice
 
-+ (OSStatus)getData:(void *)outData fromProperty:(AudioObjectPropertyAddress)property inDevice:(AudioObjectID)objectId {
-    
-    OSStatus status;
-    UInt32 size;
-    
-    status = AudioObjectGetPropertyDataSize(objectId, &property, 0, NULL, &size);
-    if (status != noErr) {
-        return status;
-    }
-    
-    status = AudioObjectGetPropertyData(objectId, &property, 0, NULL, &size, outData);
-    if (status != noErr) {
-        return status;
-    }
-    
-    return status;
-}
-
-+ (OSStatus)getArrayData:(NSArray **)outData fromProperty:(AudioObjectPropertyAddress)property inDevice:(AudioObjectID)objectId {
-    
-    OSStatus status;
-    UInt32 size;
-    
-    status = AudioObjectGetPropertyDataSize(objectId, &property, 0, NULL, &size);
-    if (status != noErr) {
-        return status;
-    }
-    
-    AudioObjectID *values = malloc(size);
-    status = AudioObjectGetPropertyData(objectId, &property, 0, NULL, &size, values);
-    
-    NSMutableArray *allValues = [NSMutableArray array];
-    
-    if (status == noErr) {
-        NSInteger numberOfDevices = size / sizeof(AudioObjectID);
-        for (NSInteger i = 0; i < numberOfDevices; i++) {
-            [allValues addObject:[NSNumber numberWithUnsignedInt:values[i]]];
-        }
-        *outData = allValues;
-    }
-    
-    free(values);
-    
-    return status;
-}
-
 + (AudioObjectID)defaultDevice {
     AudioObjectPropertyAddress property = {
         kAudioHardwarePropertyDefaultInputDevice,
@@ -71,8 +25,16 @@
         kAudioObjectPropertyElementMain
     };
     
+    OSStatus status;
+    UInt32 size;
+    
+    status = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &property, 0, NULL, &size);
+    if (status != noErr) {
+        return kAudioDeviceUnknown;
+    }
+    
     AudioObjectID deviceId;
-    OSStatus status = [self getData:&deviceId fromProperty:property inDevice:kAudioObjectSystemObject];
+    status = AudioObjectGetPropertyData(kAudioObjectSystemObject, &property, 0, NULL, &size, &deviceId);
     if (status != noErr) {
         return kAudioDeviceUnknown;
     }
@@ -87,22 +49,33 @@
         kAudioObjectPropertyElementMain
     };
     
-    NSArray *allDeviceIds;
-    OSStatus status = [self getArrayData:&allDeviceIds fromProperty:property inDevice:kAudioObjectSystemObject];
+    OSStatus status;
+    UInt32 size;
+    
+    status = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &property, 0, NULL, &size);
     if (status != noErr) {
         return @[];
     }
     
-    AudioObjectID defaultDevice = [self defaultDevice];
+    AudioObjectID *allDeviceIds = malloc(size);
+    status = AudioObjectGetPropertyData(kAudioObjectSystemObject, &property, 0, NULL, &size, allDeviceIds);
+    
     NSMutableArray *allDevices = [NSMutableArray array];
-    for (NSNumber *deviceId in allDeviceIds) {
-        AudioObjectID oid = deviceId.unsignedIntValue;
-        if ([self numberOfStreamsFor:oid] > 0) {
-            AudioInputDevice *device = [self audioDeviceFor:oid];
-            device.isDefault = defaultDevice == oid;
-            [allDevices addObject:device];
+    
+    if (status == noErr) {
+        AudioObjectID defaultDevice = [self defaultDevice];
+        
+        NSInteger numberOfDevices = size / sizeof(AudioObjectID);
+        for (NSInteger i = 0; i < numberOfDevices; i++) {
+            if ([self numberOfStreamsFor:allDeviceIds[i]] > 0) {
+                AudioInputDevice *device = [self audioDeviceFor:allDeviceIds[i]];
+                device.isDefault = defaultDevice == allDeviceIds[i];
+                [allDevices addObject:device];
+            }
         }
     }
+    
+    free(allDeviceIds);
     
     return allDevices;
 }
@@ -114,13 +87,15 @@
         kAudioObjectPropertyElementMain
     };
     
-    NSArray *streamIds;
-    OSStatus status = [self getArrayData:&streamIds fromProperty:property inDevice:objectId];
+    OSStatus status;
+    UInt32 size;
+    
+    status = AudioObjectGetPropertyDataSize(objectId, &property, 0, NULL, &size);
     if (status != noErr) {
         return 0;
     }
     
-    return streamIds.count;
+    return size / sizeof(AudioStreamID);
 }
 
 + (NSString *)deviceNameFor:(AudioObjectID)objectId defaultName:(NSString *)defaultName {
@@ -130,8 +105,16 @@
         kAudioObjectPropertyElementMain
     };
     
+    OSStatus status;
+    UInt32 size;
+    
+    status = AudioObjectGetPropertyDataSize(objectId, &property, 0, NULL, &size);
+    if (status != noErr) {
+        return defaultName;
+    }
+    
     CFStringRef string;
-    OSStatus status = [self getData:&string fromProperty:property inDevice:objectId];
+    status = AudioObjectGetPropertyData(objectId, &property, 0, NULL, &size, &string);
     if (status != noErr) {
         return defaultName;
     }
