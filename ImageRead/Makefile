@@ -1,6 +1,8 @@
 APP_NAME := ImageRead
 APP_DIR := $(APP_NAME).app/Contents/MacOS
 
+SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+
 ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,Cocoa Vision)
 OBJS := $(APP_NAME).app/Contents/Info.plist $(APP_DIR)/$(APP_NAME)
@@ -8,7 +10,7 @@ OBJS := $(APP_NAME).app/Contents/Info.plist $(APP_DIR)/$(APP_NAME)
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
-	clang $(ARCHS) $(FRAMEWORKS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -lobjc -o $@ $<
 
 $(OBJS): | $(APP_DIR)
 
