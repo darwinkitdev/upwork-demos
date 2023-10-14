@@ -10,8 +10,7 @@ ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,Cocoa ServiceManagement)
 OBJS := $(APP_DIR)/$(APP_NAME) $(LAUNCHER_DIR)/$(LAUNCHER_NAME)
 
-#IDENTITY := "PUT_YOUR_DEV_CERT_ID"
-IDENTITY := "Eric Maciel (EK8LN336E3)"
+IDENTITY := "PUT_YOUR_DEV_CERT_ID"
 
 all: $(OBJS)
 
