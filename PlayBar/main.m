@@ -78,6 +78,14 @@ typedef Boolean (*MRMediaRemoteSendCommandFunction)(MRMediaRemoteCommand cmd, NS
 
 @end
 
+@implementation NSString (Truncate)
+
+- (NSString *)stringByTruncatingMaxLength:(NSUInteger)maxLength {
+    return self.length > maxLength ? [[self substringToIndex:maxLength] stringByAppendingString:@"…"] : self;
+}
+
+@end
+
 @interface PlayBar : NSObject <NSMenuDelegate>
 @end
 
@@ -351,8 +359,8 @@ NSString *const kShowControlsInMenuBarUserDefaultsKey = @"kShowControlsInMenuBar
     if (!artistName || artistName.length == 0) {
         artistName = @"No artist name";
     }
-    songLabel.stringValue = menuBarSongLabel.stringValue = songName;
-    artistLabel.stringValue = menuBarArtistLabel.stringValue = artistName;
+    songLabel.stringValue = menuBarSongLabel.stringValue = [songName stringByTruncatingMaxLength:30];
+    artistLabel.stringValue = menuBarArtistLabel.stringValue = [artistName stringByTruncatingMaxLength:30];
     statusItem.button.title = @""; // Force layout update
 }
 
