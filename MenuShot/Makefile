@@ -44,3 +44,4 @@ $(RESOURCES): $(RESOURCES_DIR)
 
 clean:
 	rm -rf $(APP_NAME).app
+	rm -rf $(LAUNCHER_NAME).app
