@@ -5,7 +5,7 @@
 //  Created by Eric Maciel on 09/10/23.
 //
 
-#import <AVFAudio/AVFAudio.h>
+#import <AVFoundation/AVFoundation.h>
 #import <Cocoa/Cocoa.h>
 #import <CoreAudio/CoreAudio.h>
 #import <ServiceManagement/ServiceManagement.h>
@@ -295,6 +295,11 @@
     [(AudioInputDevice *)sender.representedObject setAsDefault];
 }
 
+- (void)showMicrophonePrivacySettings:(NSMenuItem *)sender {
+    NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"];
+    [NSWorkspace.sharedWorkspace openURL:url];
+}
+
 // MARK: - Launch at login methods
 
 static NSString *launcherBundleId = @"com.demos.AudioSnap-Launcher";
@@ -327,11 +332,13 @@ static NSString *launcherBundleId = @"com.demos.AudioSnap-Launcher";
 - (void)menuNeedsUpdate:(NSMenu *)menu {
     [menu removeAllItems];
     
+    BOOL isAuthorized = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeAudio] == AVAuthorizationStatusAuthorized;
+    
     NSString *recordTitle = isRecording ? @"Stop Recording" : @"Record";
     NSMenuItem *recordItem = [menu addItemWithTitle:recordTitle
                                              action:@selector(toggleRecording:)
                                       keyEquivalent:@""];
-    recordItem.target = self;
+    recordItem.target = isAuthorized ? self : nil;
     
     NSFont *boldFont = [NSFont boldSystemFontOfSize:menu.font.pointSize];
     NSDictionary *attributes = @{
@@ -341,19 +348,28 @@ static NSString *launcherBundleId = @"com.demos.AudioSnap-Launcher";
                                                                           attributes:attributes];
     recordItem.attributedTitle = attributedTitle;
     
-    [menu addItem:[NSMenuItem separatorItem]];
-    [menu addItemWithTitle:@"Input Device"
-                    action:nil
-             keyEquivalent:@""];
-    
-    NSArray *allDevices = [AudioInputDevice allDevices];
-    for (AudioInputDevice *device in allDevices) {
-        NSMenuItem *item = [menu addItemWithTitle:device.name
-                                           action:@selector(selectDefaultDevice:)
-                                    keyEquivalent:@""];
-        item.target = self;
-        item.representedObject = device;
-        [item setState:device.isDefault ? NSControlStateValueOn : NSControlStateValueOff];
+    if (isAuthorized) {
+        NSArray *allDevices = [AudioInputDevice allDevices];
+        if (allDevices.count > 0) {
+            [menu addItem:[NSMenuItem separatorItem]];
+            [menu addItemWithTitle:@"Input Device"
+                            action:nil
+                     keyEquivalent:@""];
+            
+            for (AudioInputDevice *device in allDevices) {
+                NSMenuItem *item = [menu addItemWithTitle:device.name
+                                                   action:@selector(selectDefaultDevice:)
+                                            keyEquivalent:@""];
+                item.target = self;
+                item.representedObject = device;
+                [item setState:device.isDefault ? NSControlStateValueOn : NSControlStateValueOff];
+            }
+        }
+    } else {
+        [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {}];
+        [menu addItemWithTitle:@"Grant microphone access..."
+                        action:@selector(showMicrophonePrivacySettings:)
+                 keyEquivalent:@""].target = self;
     }
     
     [menu addItem:[NSMenuItem separatorItem]];

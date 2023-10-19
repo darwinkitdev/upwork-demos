@@ -201,7 +201,7 @@ OSStatus hotKeyHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
         CGDirectDisplayID displayId = screenNumber.unsignedIntValue;
         CGImageRef cgImage = CGDisplayCreateImage(displayId);
         if (cgImage) {
-            NSURL *destURL = [[NSURL alloc] initFileURLWithPath:[self newFileName] relativeToURL:baseURL];
+            NSURL *destURL = [NSURL fileURLWithPath:[self newFileName] relativeToURL:baseURL];
             [self saveImage:cgImage to:destURL];
         }
     }
@@ -264,7 +264,7 @@ OSStatus hotKeyHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
             CGWindowID windowId = (CGWindowID)[NSWindow windowNumberAtPoint:NSEvent.mouseLocation belowWindowWithWindowNumber:overlayWindow.windowNumber];
             CGImageRef cgImage = CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, windowId, kCGWindowImageDefault);
             if (cgImage) {
-                NSURL *destURL = [[NSURL alloc] initFileURLWithPath:[self newFileName] relativeToURL:self->baseURL];
+                NSURL *destURL = [NSURL fileURLWithPath:[self newFileName] relativeToURL:self->baseURL];
                 [self saveImage:cgImage to:destURL];
             }
         }
@@ -303,12 +303,17 @@ OSStatus hotKeyHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
             selectedArea.origin.y = screenHeight - (selectedArea.origin.y + selectedArea.size.height);
             CGImageRef cgImage = CGWindowListCreateImage(selectedArea, kCGWindowListOptionOnScreenOnly, (CGWindowID)overlayWindow.windowNumber, kCGWindowImageDefault);
             if (cgImage) {
-                NSURL *destURL = [[NSURL alloc] initFileURLWithPath:[self newFileName] relativeToURL:self->baseURL];
+                NSURL *destURL = [NSURL fileURLWithPath:[self newFileName] relativeToURL:self->baseURL];
                 [self saveImage:cgImage to:destURL];
             }
         }
         return event;
     }];
+}
+
+- (void)showScreenCapturePrivacySettings:(NSMenuItem *)sender {
+    NSURL *url = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"];
+    [NSWorkspace.sharedWorkspace openURL:url];
 }
 
 // MARK: - Global shortcut methods
@@ -391,12 +396,26 @@ static NSString *launcherBundleId = @"com.demos.MenuShot-Launcher";
 
 // MARK: - Menu delegate
 
-- (void)menuNeedsUpdate:(NSMenu *)menu {
-    for (NSMenuItem *item in menu.itemArray) {
-        if (item.representedObject != nil) {
-            [item setState:[self isLaunchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
-        }
+- (void)menuWillOpen:(NSMenu *)menu {
+    if (!CGPreflightScreenCaptureAccess()) {
+        CGRequestScreenCaptureAccess();
     }
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)menu {
+    BOOL isAuthorized = CGPreflightScreenCaptureAccess();
+    for (NSMenuItem *item in menu.itemArray) {
+        if (item.tag >= 100) {
+            break;
+        }
+        item.enabled = isAuthorized;
+    }
+    NSMenuItem *permissionItem = [menu itemWithTag:100];
+    if (isAuthorized && permissionItem) {
+        [menu removeItem:permissionItem];
+    }
+    NSMenuItem *launchAtLoginItem = [menu itemWithTag:101];
+    [launchAtLoginItem setState:[self isLaunchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
 }
 
 @end
@@ -413,6 +432,7 @@ int main(int argc, const char * argv[]) {
         NSStatusItem * statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
         statusItem.button.image = [NSImage imageWithSystemSymbolName:@"camera.shutter.button" accessibilityDescription:nil];
         statusItem.menu = [NSMenu new];
+        statusItem.menu.autoenablesItems = NO;
         statusItem.menu.delegate = captureManager;
         
         [statusItem.menu addItemWithTitle:@"Capture screen"
@@ -424,16 +444,21 @@ int main(int argc, const char * argv[]) {
         [statusItem.menu addItemWithTitle:@"Capture selected area"
                                    action:@selector(captureArea:)
                             keyEquivalent:@"R"].target = captureManager;
+        NSMenuItem *permissionItem = [statusItem.menu addItemWithTitle:@"Grant screen capture permission..."
+                                                                action:@selector(showScreenCapturePrivacySettings:)
+                                                         keyEquivalent:@""];
+        permissionItem.target = captureManager;
+        permissionItem.tag = 100;
         [statusItem.menu addItem:[NSMenuItem separatorItem]];
         NSMenuItem *launchAtLoginItem = [statusItem.menu addItemWithTitle:@"Launch at Login"
                                                                    action:@selector(toggleLaunchAtLogin:)
                                                             keyEquivalent:@""];
         launchAtLoginItem.target = captureManager;
-        launchAtLoginItem.representedObject = @[];
+        launchAtLoginItem.tag = 101;
         [statusItem.menu addItemWithTitle:@"Quit"
                                    action:@selector(terminate:)
                             keyEquivalent:@"q"].target = app;
-
+        
         // Run the app
         [app run];
     }

@@ -7,7 +7,7 @@ LAUNCHER_DIR := $(LAUNCHER_NAME).app/Contents/MacOS
 SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
 
 ARCHS := $(addprefix -arch ,x86_64 arm64)
-FRAMEWORKS := $(addprefix -framework ,AVFAudio Cocoa CoreAudio ServiceManagement)
+FRAMEWORKS := $(addprefix -framework ,AVFoundation Cocoa CoreAudio ServiceManagement)
 OBJS := $(APP_DIR)/$(APP_NAME) $(LAUNCHER_DIR)/$(LAUNCHER_NAME)
 
 IDENTITY := "PUT_YOUR_DEV_CERT_ID"
