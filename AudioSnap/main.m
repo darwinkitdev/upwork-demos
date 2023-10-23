@@ -300,33 +300,6 @@
     [NSWorkspace.sharedWorkspace openURL:url];
 }
 
-// MARK: - Launch at login methods
-
-static NSString *launcherBundleId = @"com.demos.AudioSnap-Launcher";
-
-- (void)toggleLaunchAtLogin:(NSMenuItem *)sender {
-    BOOL isEnabled = ![self isLaunchAtLoginEnabled];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    SMLoginItemSetEnabled((__bridge CFStringRef)launcherBundleId, isEnabled);
-#pragma clang diagnostic pop
-}
-
-- (BOOL)isLaunchAtLoginEnabled {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    // Apple deprecated this function in version 10.10 and didn't provide an alternative,
-    // so the only option is to use it anyway and silence the deprecation warning.
-    NSArray *jobsDict = (__bridge NSArray *)(SMCopyAllJobDictionaries(kSMDomainUserLaunchd));
-#pragma clang diagnostic pop
-    for (NSDictionary *job in jobsDict) {
-        if ([job[@"Label"] isEqualToString:launcherBundleId]) {
-            return ((NSNumber *)job[@"OnDemand"]).boolValue;
-        }
-    }
-    return NO;
-}
-
 // MARK: - Menu delegate methods
 
 - (void)menuNeedsUpdate:(NSMenu *)menu {
@@ -373,11 +346,6 @@ static NSString *launcherBundleId = @"com.demos.AudioSnap-Launcher";
     }
     
     [menu addItem:[NSMenuItem separatorItem]];
-    NSMenuItem *launchAtLoginItem = [menu addItemWithTitle:@"Launch at Login"
-                                                    action:@selector(toggleLaunchAtLogin:)
-                                             keyEquivalent:@""];
-    launchAtLoginItem.target = self;
-    [launchAtLoginItem setState:[self isLaunchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
     [menu addItemWithTitle:@"Quit"
                     action:@selector(terminate:)
              keyEquivalent:@"q"].target = NSApplication.sharedApplication;
