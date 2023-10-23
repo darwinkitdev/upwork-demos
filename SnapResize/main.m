@@ -56,7 +56,7 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
 
 @end
 
-@interface SnapResize : NSObject <NSMenuDelegate>
+@interface SnapResize : NSObject
 @end
 
 @implementation SnapResize {
@@ -143,40 +143,6 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
 - (void)arrange:(NSMenuItem *)sender {
     WindowPosition position = ((NSNumber *)sender.representedObject).integerValue;
     [self arrangeWithPosition:position];
-}
-
-// MARK: - Launch at login methods
-
-static NSString *launcherBundleId = @"com.demos.SnapResize-Launcher";
-
-- (void)toggleLaunchAtLogin:(NSMenuItem *)sender {
-    BOOL isEnabled = ![self isLaunchAtLoginEnabled];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    SMLoginItemSetEnabled((__bridge CFStringRef)launcherBundleId, isEnabled);
-#pragma clang diagnostic pop
-}
-
-- (BOOL)isLaunchAtLoginEnabled {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    // Apple deprecated this function in version 10.10 and didn't provide an alternative,
-    // so the only option is to use it anyway and silence the deprecation warning.
-    NSArray *jobsDict = (__bridge NSArray *)(SMCopyAllJobDictionaries(kSMDomainUserLaunchd));
-#pragma clang diagnostic pop
-    for (NSDictionary *job in jobsDict) {
-        if ([job[@"Label"] isEqualToString:launcherBundleId]) {
-            return ((NSNumber *)job[@"OnDemand"]).boolValue;
-        }
-    }
-    return NO;
-}
-
-// MARK: - Menu delegate
-
-- (void)menuNeedsUpdate:(NSMenu *)menu {
-    NSMenuItem *launchAtLoginItem = [menu itemWithTag:100];
-    [launchAtLoginItem setState:[self isLaunchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
 }
 
 // MARK: - Global shortcut methods
@@ -271,7 +237,6 @@ int main(int argc, const char * argv[]) {
         statusItem.button.image = [NSImage imageWithSystemSymbolName:@"uiwindow.split.2x1"
                                             accessibilityDescription:nil];
         statusItem.menu = [NSMenu new];
-        statusItem.menu.delegate = snapResize;
         
         NSEventModifierFlags modifiers = NSEventModifierFlagCommand|NSEventModifierFlagControl|NSEventModifierFlagOption;
         [statusItem.menu addItemWithTitle:@"Left"
@@ -336,12 +301,6 @@ int main(int argc, const char * argv[]) {
                 keyEquivalentModifierMask:modifiers];
         
         [statusItem.menu addItem:[NSMenuItem separatorItem]];
-        
-        NSMenuItem *item = [statusItem.menu addItemWithTitle:@"Launch at Login"
-                                                      action:@selector(toggleLaunchAtLogin:)
-                                               keyEquivalent:@""];
-        item.target = snapResize;
-        item.tag = 100;
         
         [statusItem.menu addItemWithTitle:@"Quit"
                                    action:@selector(terminate:)
