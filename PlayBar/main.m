@@ -228,13 +228,7 @@ NSString *const kShowControlsInMenuBarUserDefaultsKey = @"kShowControlsInMenuBar
     
     [statusItem.menu addItem:[NSMenuItem separatorItem]];
     
-    // Create launch at login and quit itens
-    
-    NSMenuItem *launchAtLoginItem = [statusItem.menu addItemWithTitle:@"Launch at Login"
-                                                               action:@selector(toggleLaunchAtLogin:)
-                                                        keyEquivalent:@""];
-    launchAtLoginItem.target = self;
-    launchAtLoginItem.tag = 102;
+    // Create quit item
     
     [statusItem.menu addItemWithTitle:@"Quit"
                                action:@selector(terminate:)
@@ -384,33 +378,6 @@ NSString *const kShowControlsInMenuBarUserDefaultsKey = @"kShowControlsInMenuBar
     [self updateIsPlaying:[notification.userInfo[@"kMRMediaRemoteNowPlayingApplicationIsPlayingUserInfoKey"] boolValue]];
 }
 
-// MARK: - Launch at login methods
-
-static NSString *launcherBundleId = @"com.demos.PlayBar-Launcher";
-
-- (void)toggleLaunchAtLogin:(NSMenuItem *)sender {
-    BOOL isEnabled = ![self isLaunchAtLoginEnabled];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    SMLoginItemSetEnabled((__bridge CFStringRef)launcherBundleId, isEnabled);
-#pragma clang diagnostic pop
-}
-
-- (BOOL)isLaunchAtLoginEnabled {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    // Apple deprecated this function in version 10.10 and didn't provide an alternative,
-    // so the only option is to use it anyway and silence the deprecation warning.
-    NSArray *jobsDict = (__bridge NSArray *)(SMCopyAllJobDictionaries(kSMDomainUserLaunchd));
-#pragma clang diagnostic pop
-    for (NSDictionary *job in jobsDict) {
-        if ([job[@"Label"] isEqualToString:launcherBundleId]) {
-            return ((NSNumber *)job[@"OnDemand"]).boolValue;
-        }
-    }
-    return NO;
-}
-
 // MARK: - Menu delegate
 
 - (void)menuNeedsUpdate:(NSMenu *)menu {
@@ -418,8 +385,6 @@ static NSString *launcherBundleId = @"com.demos.PlayBar-Launcher";
     [showSongItem setState:[NSUserDefaults.standardUserDefaults boolForKey:kShowSongInMenuBarUserDefaultsKey] ? NSControlStateValueOn : NSControlStateValueOff];
     NSMenuItem *showControlsItem = [menu itemWithTag:101];
     [showControlsItem setState:[NSUserDefaults.standardUserDefaults boolForKey:kShowControlsInMenuBarUserDefaultsKey] ? NSControlStateValueOn : NSControlStateValueOff];
-    NSMenuItem *launchAtLoginItem = [menu itemWithTag:102];
-    [launchAtLoginItem setState:[self isLaunchAtLoginEnabled] ? NSControlStateValueOn : NSControlStateValueOff];
 }
 
 @end
