@@ -2,6 +2,7 @@ APP_NAME := AudioSnap
 APP_DIR := $(APP_NAME).app/Contents/MacOS
 
 SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+MIN_OS = 11.0
 
 ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,AVFoundation Cocoa CoreAudio ServiceManagement)

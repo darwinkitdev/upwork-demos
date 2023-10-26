@@ -2,6 +2,7 @@ APP_NAME := SnapResize
 APP_DIR := $(APP_NAME).app/Contents/MacOS
 
 SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+MIN_OS = 11.0
 
 ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,Cocoa Carbon ServiceManagement)
@@ -10,7 +11,7 @@ OBJS := $(APP_DIR)/$(APP_NAME)
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
-	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -lobjc -o $@ $<
 
 $(OBJS): | $(APP_DIR)
 

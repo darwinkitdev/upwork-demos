@@ -4,6 +4,7 @@ RESOURCES_DIR := $(APP_NAME).app/Contents/Resources
 RESOURCES := screenshotselection.pdf screenshotwindow.pdf
 
 SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+MIN_OS = 11.0
 
 ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,Cocoa Carbon ServiceManagement AudioToolbox)
@@ -12,7 +13,7 @@ OBJS := $(RESOURCES) $(APP_DIR)/$(APP_NAME)
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
-	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -lobjc -o $@ $<
 
 $(OBJS): | $(APP_DIR)
 
