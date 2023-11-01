@@ -68,7 +68,7 @@
                                                                        options:NSDirectoryEnumerationSkipsHiddenFiles
                                                                          error:nil];
     contents = [contents sortedArrayUsingComparator:^NSComparisonResult(NSURL *url1, NSURL *url2) {
-        return [url1.lastPathComponent localizedCaseInsensitiveCompare:url2.lastPathComponent];
+        return [url1.lastPathComponent localizedStandardCompare:url2.lastPathComponent];
     }];
     contents = [contents sortedArrayUsingComparator:^NSComparisonResult(NSURL *url1, NSURL *url2) {
         if (url1.hasDirectoryPath == url2.hasDirectoryPath) {

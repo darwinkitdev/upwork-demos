@@ -76,7 +76,7 @@
         }
     }
     [browsers sortUsingComparator:^NSComparisonResult(Browser *obj1, Browser *obj2) {
-        return [obj1.name compare:obj2.name];
+        return [obj1.name localizedStandardCompare:obj2.name];
     }];
     return browsers;
 }
