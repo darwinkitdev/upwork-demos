@@ -100,19 +100,7 @@ static NSMutableArray *gMenuBarItems;
     return gMenuBarItems;
 }
 
-// MARK: - Instance methods, constants and helpers
-
-dispatch_source_t CreateDebounceDispatchTimer(double debounceTime, dispatch_queue_t queue, dispatch_block_t block) {
-    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
-    
-    if (timer) {
-        dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, debounceTime * NSEC_PER_SEC), DISPATCH_TIME_FOREVER, (1ull * NSEC_PER_SEC) / 10);
-        dispatch_source_set_event_handler(timer, block);
-        dispatch_resume(timer);
-    }
-    
-    return timer;
-}
+// MARK: - Instance methods and constants
 
 NSString * const kDefaultCityDetails = @"Los Angeles, California, US";
 NSInteger const kCitiesMenuItemTag = 100;
@@ -244,10 +232,19 @@ NSInteger const kCitiesMenuItemTag = 100;
     }
     
     dispatch_queue_t queue = dispatch_get_main_queue();
-    double secondsToThrottle = 0.500f;
-    self.debounceTimer = CreateDebounceDispatchTimer(secondsToThrottle, queue, ^{
-        [self queryCityDetails:cityDetails];
-    });
+    double debounceTime = 0.500f;
+    
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
+    
+    if (timer) {
+        dispatch_source_set_timer(timer, dispatch_time(DISPATCH_TIME_NOW, debounceTime * NSEC_PER_SEC), DISPATCH_TIME_FOREVER, (1ull * NSEC_PER_SEC) / 10);
+        dispatch_source_set_event_handler(timer, ^{
+            [self queryCityDetails:cityDetails];
+        });
+        dispatch_resume(timer);
+    }
+    
+    self.debounceTimer = timer;
 }
 
 - (void)removeCitySearchItems {
