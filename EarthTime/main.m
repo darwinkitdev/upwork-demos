@@ -108,6 +108,7 @@ NSInteger const kCitiesMenuItemTag = 100;
 - (void)setup {
     NSStatusItem *statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
     statusItem.menu = [NSMenu new];
+    statusItem.menu.minimumWidth = 220;
     statusItem.menu.delegate = self;
     
     
@@ -138,7 +139,6 @@ NSInteger const kCitiesMenuItemTag = 100;
     stackView.alignment = NSLayoutAttributeLeading;
     stackView.spacing = 4;
     stackView.edgeInsets = NSEdgeInsetsMake(0, 5, 5, 5);
-    [stackView.widthAnchor constraintGreaterThanOrEqualToConstant:200].active = YES;
     NSMenuItem *searchItem = [NSMenuItem new];
     searchItem.view = stackView;
     [statusItem.menu addItem:searchItem];
