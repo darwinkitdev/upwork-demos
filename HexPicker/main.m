@@ -165,7 +165,6 @@ NSUInteger const kMaxRecentColors = 10;
 }
 
 - (void)dealloc {
-    [super dealloc];
     [self unregisterShortcuts];
 }
 
