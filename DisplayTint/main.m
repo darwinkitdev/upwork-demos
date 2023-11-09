@@ -24,6 +24,10 @@
 }
 @end
 
+@interface NSMenuItem ()
+@property (setter=_setViewHandlesEvents:) BOOL _viewHandlesEvents;
+@end
+
 @implementation NSImage (Additions)
 + (NSImage *)roundedRectImageWithSize:(NSSize)size andColor:(NSColor *)color {
     return [NSImage imageWithSize:size
@@ -36,95 +40,6 @@
         return YES;
     }];
 }
-@end
-
-@interface MenuItemView : NSView
-@property (weak) NSVisualEffectView *effectView;
-@property (weak) NSStackView *stackView;
-@end
-
-@implementation MenuItemView {
-    NSTrackingArea *trackingArea;
-}
-
-- (instancetype)init {
-    if (self = [super init]) {
-        NSVisualEffectView *effectView = [NSVisualEffectView new];
-        effectView.translatesAutoresizingMaskIntoConstraints = NO;
-        effectView.state = NSVisualEffectStateActive;
-        effectView.material = NSVisualEffectMaterialSelection;
-        effectView.emphasized = YES;
-        effectView.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-        effectView.hidden = YES;
-        effectView.wantsLayer = YES;
-        effectView.layer.cornerRadius = 4;
-        [self addSubview:effectView];
-        self.effectView = effectView;
-        [NSLayoutConstraint activateConstraints:@[
-            [effectView.leftAnchor constraintEqualToAnchor:self.leftAnchor constant:5],
-            [effectView.rightAnchor constraintEqualToAnchor:self.rightAnchor constant:-5],
-            [effectView.topAnchor constraintEqualToAnchor:self.topAnchor],
-            [effectView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor]
-        ]];
-        
-        NSStackView *stackView = [NSStackView stackViewWithViews:@[]];
-        stackView.translatesAutoresizingMaskIntoConstraints = NO;
-        stackView.distribution = NSStackViewDistributionEqualSpacing;
-        [self addSubview:stackView];
-        self.stackView = stackView;
-        [NSLayoutConstraint activateConstraints:@[
-            [stackView.leftAnchor constraintEqualToAnchor:self.leftAnchor constant:12],
-            [stackView.rightAnchor constraintEqualToAnchor:self.rightAnchor constant:-14],
-            [stackView.topAnchor constraintEqualToAnchor:self.topAnchor constant:3],
-            [stackView.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-3]
-        ]];
-    }
-    return self;
-}
-
-- (void)viewDidMoveToWindow {
-    [super viewDidMoveToWindow];
-    [self.window becomeKeyWindow];
-}
-
-- (void)updateTrackingAreas {
-    [super updateTrackingAreas];
-    if (trackingArea) {
-        [self removeTrackingArea:trackingArea];
-    }
-    trackingArea = [[NSTrackingArea alloc] initWithRect:self.bounds
-                                                        options:NSTrackingMouseEnteredAndExited | NSTrackingMouseMoved | NSTrackingActiveAlways
-                                                          owner:self
-                                                       userInfo:nil];
-    [self addTrackingArea:trackingArea];
-}
-
-- (void)mouseExited:(NSEvent *)event {
-    self.effectView.hidden = YES;
-}
-
-- (void)mouseMoved:(NSEvent *)event {
-    self.effectView.hidden = !self.enclosingMenuItem.isHighlighted;
-}
-
-- (void)mouseUp:(NSEvent *)event {
-    [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context) {
-        context.duration = 0.05;
-        self.effectView.animator.alphaValue = 0;
-    } completionHandler:^{
-        [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context) {
-            context.duration = 0.1;
-            self.effectView.animator.alphaValue = 1;
-        } completionHandler:^{
-            NSMenuItem *menuItem = self.enclosingMenuItem;
-            NSMenu *menu = menuItem.menu;
-            [menu cancelTracking];
-            [menu performActionForItemAtIndex:[menu indexOfItem:menuItem]];
-            self.effectView.hidden = YES;
-        }];
-    }];
-}
-
 @end
 
 @interface DisplayTint : NSObject <NSMenuDelegate, NSWindowDelegate>
@@ -236,8 +151,8 @@ NSInteger const kSetTintMenuItemTag = 101;
     [enableTintItem setState:self.tintIsEnabled ? NSControlStateValueOn : NSControlStateValueOff];
     
     NSMenuItem *tintItem = [menu itemWithTag:kSetTintMenuItemTag];
-    MenuItemView *tintView = (MenuItemView *)tintItem.view;
-    tintView.stackView.edgeInsets = NSEdgeInsetsMake(0, [menu stateColumnWidth] - 6, 0, 0);
+    NSStackView *tintView = (NSStackView *)tintItem.view;
+    tintView.edgeInsets = NSEdgeInsetsMake(3, MAX([menu stateColumnWidth], 6), 3, 10);
 }
 
 // MARK: - Window delegate methods
@@ -302,12 +217,11 @@ int main(int argc, const char * argv[]) {
         NSTextField *tintLabel = [NSTextField labelWithString:@"Set Tint..."];
         NSImageView *tintImageView = [NSImageView imageViewWithImage:[NSImage roundedRectImageWithSize:NSMakeSize(16, 16)
                                                                                               andColor:displayTint.selectedColor]];
-        MenuItemView *tintView = [MenuItemView new];
-        tintView.translatesAutoresizingMaskIntoConstraints = NO;
-        [tintView.stackView setViews:@[tintLabel, tintImageView]
-                           inGravity:NSStackViewGravityCenter];
+        NSStackView *tintView = [NSStackView stackViewWithViews:@[tintLabel, tintImageView]];
+        tintView.distribution = NSStackViewDistributionEqualSpacing;
         
         NSMenuItem *tintItem = [NSMenuItem new];
+        tintItem._viewHandlesEvents = NO;
         tintItem.view = tintView;
         tintItem.action = @selector(chooseColor:);
         tintItem.target = displayTint;
@@ -329,13 +243,12 @@ int main(int argc, const char * argv[]) {
         // Setup the overlay window
         
         NSWindow *overlayWindow = [[NSWindow alloc] initWithContentRect:NSZeroRect
-                                                              styleMask:NSWindowStyleMaskBorderless
+                                                              styleMask:0
                                                                 backing:NSBackingStoreBuffered
                                                                   defer:NO];
-        overlayWindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary;
-        overlayWindow.level = NSScreenSaverWindowLevel;
+        overlayWindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
+        overlayWindow.level = CGShieldingWindowLevel();
         overlayWindow.ignoresMouseEvents = YES;
-        overlayWindow.hasShadow = NO;
         overlayWindow.opaque = NO;
         overlayWindow.alphaValue = 0.25;
         overlayWindow.backgroundColor = displayTint.selectedColor;
