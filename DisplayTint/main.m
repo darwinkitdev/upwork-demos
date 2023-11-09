@@ -10,7 +10,7 @@
 
 @implementation NSMenu (Additions)
 - (CGFloat)stateColumnWidth {
-    CGFloat stateWidth = 0;
+    CGFloat stateWidth = 6;
     for (NSMenuItem *item in self.itemArray) {
         if (item.state == NSControlStateValueOn) {
             stateWidth = item.onStateImage.size.width;
@@ -152,7 +152,7 @@ NSInteger const kSetTintMenuItemTag = 101;
     
     NSMenuItem *tintItem = [menu itemWithTag:kSetTintMenuItemTag];
     NSStackView *tintView = (NSStackView *)tintItem.view;
-    tintView.edgeInsets = NSEdgeInsetsMake(3, MAX([menu stateColumnWidth], 6), 3, 10);
+    tintView.edgeInsets = NSEdgeInsetsMake(3, [menu stateColumnWidth], 3, 10);
 }
 
 // MARK: - Window delegate methods
