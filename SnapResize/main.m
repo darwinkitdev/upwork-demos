@@ -47,7 +47,6 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
 }
 
 - (void)dealloc {
-    [super dealloc];
     if (hotKeyRef) {
         UnregisterEventHotKey(hotKeyRef);
         hotKeyRef = NULL;
@@ -71,7 +70,6 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
 }
 
 - (void)dealloc {
-    [super dealloc];
     [self unregisterShortcuts];
 }
 

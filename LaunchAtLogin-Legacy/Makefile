@@ -16,11 +16,11 @@ IDENTITY := "PUT_YOUR_DEV_CERT_ID"
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
-	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
 	codesign -s $(IDENTITY) $(APP_NAME).app
 
 $(LAUNCHER_DIR)/$(LAUNCHER_NAME): launcher.m
-	clang $(ARCHS) -isysroot $(SYSROOT) -framework Cocoa -mmacos-version-min=$(MIN_OS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) -framework Cocoa -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
 	codesign -s $(IDENTITY) $(LAUNCHER_NAME).app
 	mkdir -p $(APP_NAME).app/Contents/Library/LoginItems/
 	mv $(LAUNCHER_NAME).app $(APP_NAME).app/Contents/Library/LoginItems/

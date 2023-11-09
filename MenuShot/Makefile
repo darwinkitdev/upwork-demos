@@ -13,7 +13,7 @@ OBJS := $(RESOURCES) $(APP_DIR)/$(APP_NAME)
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
-	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -lobjc -o $@ $<
+	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
 
 $(OBJS): | $(APP_DIR)
 

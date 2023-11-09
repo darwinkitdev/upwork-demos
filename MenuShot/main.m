@@ -170,7 +170,6 @@ OSStatus hotKeyHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 }
 
 - (void)dealloc {
-    [super dealloc];
     [self stopCapturing];
     [self unregisterShortcuts];
 }
