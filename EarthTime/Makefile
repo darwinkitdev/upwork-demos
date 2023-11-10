@@ -14,6 +14,7 @@ all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
 	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
+	codesign --deep --force --sign - $(APP_NAME).app
 
 $(OBJS): | $(APP_DIR)
 

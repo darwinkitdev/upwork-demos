@@ -8,13 +8,11 @@ ARCHS := $(addprefix -arch ,x86_64 arm64)
 FRAMEWORKS := $(addprefix -framework ,Cocoa ServiceManagement)
 OBJS := $(APP_NAME).app/Contents/Info.plist $(APP_DIR)/$(APP_NAME)
 
-IDENTITY := "PUT_YOUR_DEV_CERT_ID"
-
 all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
 	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
-	codesign -s $(IDENTITY) $(APP_NAME).app
+	codesign --deep --force --sign - $(APP_NAME).app
 
 $(OBJS): | $(APP_DIR)
 

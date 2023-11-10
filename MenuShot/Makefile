@@ -14,12 +14,13 @@ all: $(OBJS)
 
 $(APP_DIR)/$(APP_NAME): main.m
 	clang $(ARCHS) -isysroot $(SYSROOT) $(FRAMEWORKS) -mmacos-version-min=$(MIN_OS) -fobjc-arc -o $@ $<
+	codesign --deep --force --sign - $(APP_NAME).app
 
 $(OBJS): | $(APP_DIR)
 
 $(APP_DIR):
 	mkdir -p $(APP_DIR)
-	cp $(APP_NAME)-Info.plist $(APP_NAME).app/Contents/Info.plist
+	cp Info.plist $(APP_NAME).app/Contents/Info.plist
 
 $(RESOURCES_DIR):
 	mkdir -p $(RESOURCES_DIR)
