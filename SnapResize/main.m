@@ -7,7 +7,6 @@
 
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
-#import <ServiceManagement/ServiceManagement.h>
 
 typedef NS_ENUM(NSInteger, WindowPosition) {
     WindowPositionLeft,

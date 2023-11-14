@@ -7,7 +7,7 @@ SYSROOT := $(shell xcrun --sdk macosx --show-sdk-path)
 MIN_OS = 11.0
 
 ARCHS := $(addprefix -arch ,x86_64 arm64)
-FRAMEWORKS := $(addprefix -framework ,Cocoa Carbon ServiceManagement AudioToolbox)
+FRAMEWORKS := $(addprefix -framework ,Cocoa Carbon AudioToolbox)
 OBJS := $(RESOURCES) $(APP_DIR)/$(APP_NAME)
 
 all: $(OBJS)

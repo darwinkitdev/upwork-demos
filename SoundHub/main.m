@@ -7,7 +7,6 @@
 
 #import <Cocoa/Cocoa.h>
 #import <CoreAudio/CoreAudio.h>
-#import <ServiceManagement/ServiceManagement.h>
 
 @interface AudioDevice : NSObject
 @property (assign) AudioObjectID objectId;

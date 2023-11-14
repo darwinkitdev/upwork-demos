@@ -8,7 +8,6 @@
 #import <AudioToolbox/AudioToolbox.h>
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
-#import <ServiceManagement/ServiceManagement.h>
 
 
 // Custom NSPanel that accepts keyboard events.

@@ -6,7 +6,6 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import <ServiceManagement/ServiceManagement.h>
 
 // MARK: - MediaRemote.framework types
 
