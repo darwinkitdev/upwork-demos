@@ -9,6 +9,7 @@
 
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
+        NSApplication *app = NSApplication.sharedApplication;
         NSString *mainAppBundleID = @"com.demos.LaunchAtLogin-Legacy";
         BOOL isRunning = NO;
         for (NSRunningApplication *app in NSWorkspace.sharedWorkspace.runningApplications) {
@@ -18,16 +19,18 @@ int main(int argc, const char * argv[]) {
             }
         }
         if (!isRunning) {
-            NSString *path = NSBundle.mainBundle.bundlePath;
-            path = [path stringByDeletingLastPathComponent];
-            path = [path stringByDeletingLastPathComponent];
-            path = [path stringByDeletingLastPathComponent];
-            path = [path stringByDeletingLastPathComponent];
-            NSURL *appURL = [NSURL URLWithString:path];
-            [NSWorkspace.sharedWorkspace openApplicationAtURL:appURL
-                                                configuration:[NSWorkspaceOpenConfiguration new]
-                                            completionHandler:nil];
+            NSURL *url = NSBundle.mainBundle.bundleURL;
+            url = [url URLByDeletingLastPathComponent];
+            url = [url URLByDeletingLastPathComponent];
+            url = [url URLByDeletingLastPathComponent];
+            url = [url URLByDeletingLastPathComponent];
+            [NSWorkspace.sharedWorkspace openApplicationAtURL:url
+                                                configuration:[NSWorkspaceOpenConfiguration configuration]
+                                            completionHandler:^(NSRunningApplication * _Nullable app, NSError * _Nullable error) {
+                [NSApp terminate:app];
+            }];
         }
+        [app run];
     }
     return EXIT_SUCCESS;
 }
