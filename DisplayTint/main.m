@@ -42,10 +42,10 @@
 }
 @end
 
-@interface DisplayTint : NSObject <NSMenuDelegate, NSWindowDelegate>
-@property (nonatomic, weak) NSWindow *overlayWindow;
+@interface DisplayTint : NSObject <NSMenuDelegate>
 @property (nonatomic, weak) NSSlider *brightnessSlider;
 @property (nonatomic, weak) NSImageView *tintImageView;
+@property (nonatomic, strong) NSMutableArray *overlayWindows;
 @property (nonatomic, strong) NSColor *selectedColor;
 @property (nonatomic, assign) BOOL tintIsEnabled;
 @end
@@ -57,7 +57,7 @@ NSInteger const kSetTintMenuItemTag = 101;
 
 - (void)handleColor:(NSColorPanel *)colorPanel {
     self.selectedColor = [colorPanel color];
-    self.overlayWindow.backgroundColor = self.selectedColor;
+    [self updateOverlayColor];
 }
 
 - (void)chooseColor:(NSMenuItem *)sender {
@@ -69,24 +69,66 @@ NSInteger const kSetTintMenuItemTag = 101;
     [NSApp activateIgnoringOtherApps:YES];
 }
 
-- (void)updateOverlayState {
+- (void)createOverlayWindowForScreenIfNeeded:(NSScreen *)screen {
+    for (NSWindow *overlayWindow in self.overlayWindows) {
+        if ([overlayWindow.screen isEqualTo:screen]) {
+            return;
+        }
+    }
+    
+    NSWindow *overlayWindow = [[NSWindow alloc] initWithContentRect:NSZeroRect
+                                                          styleMask:0
+                                                            backing:NSBackingStoreBuffered
+                                                              defer:NO
+                                                             screen:screen];
+    overlayWindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
+    overlayWindow.level = CGShieldingWindowLevel();
+    overlayWindow.ignoresMouseEvents = YES;
+    overlayWindow.opaque = NO;
+    overlayWindow.alphaValue = self.tintIsEnabled ? 0.25 : 0;
+    overlayWindow.backgroundColor = self.selectedColor;
+    
+    [overlayWindow setFrame:screen.frame display:YES];
+    
+    [self.overlayWindows addObject:overlayWindow];
+}
+
+- (void)createOverlayWindowsIfNeeded {
+    for (NSScreen *screen in NSScreen.screens) {
+        [self createOverlayWindowForScreenIfNeeded:screen];
+    }
+}
+
+- (void)updateOverlayColor {
+    for (NSWindow *overlayWindow in self.overlayWindows) {
+        overlayWindow.backgroundColor = self.selectedColor;
+    }
+}
+
+- (void)updateStateForOverlayWindow:(NSWindow *)overlayWindow {
     if (self.tintIsEnabled) {
-        self.overlayWindow.alphaValue = 0;
-        [self.overlayWindow orderFrontRegardless];
+        overlayWindow.alphaValue = 0;
+        [overlayWindow orderFrontRegardless];
     }
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext * _Nonnull context) {
         context.duration = 0.5;
-        self.overlayWindow.animator.alphaValue = self.tintIsEnabled ? 0.25 : 0;
+        overlayWindow.animator.alphaValue = self.tintIsEnabled ? 0.25 : 0;
     } completionHandler:^{
         if (!self.tintIsEnabled) {
-            [self.overlayWindow orderOut:self];
+            [overlayWindow orderOut:self];
         }
     }];
 }
 
+- (void)updateStateForOverlayWindows {
+    for (NSWindow *overlayWindow in self.overlayWindows) {
+        [self updateStateForOverlayWindow:overlayWindow];
+    }
+}
+
 - (void)toggleEnableTint:(NSMenuItem *)sender {
     self.tintIsEnabled = !self.tintIsEnabled;
-    [self updateOverlayState];
+    [self updateStateForOverlayWindows];
 }
 
 - (void)adjustBrightness:(NSSlider *)sender {
@@ -155,13 +197,6 @@ NSInteger const kSetTintMenuItemTag = 101;
     tintView.edgeInsets = NSEdgeInsetsMake(3, [menu stateColumnWidth], 3, 10);
 }
 
-// MARK: - Window delegate methods
-
-- (void)windowDidChangeScreen:(NSNotification *)notification {
-    NSWindow *window = notification.object;
-    [window setFrame:window.screen.frame display:YES];
-}
-
 @end
 
 int main(int argc, const char * argv[]) {
@@ -170,6 +205,7 @@ int main(int argc, const char * argv[]) {
         app.activationPolicy = NSApplicationActivationPolicyAccessory;
         
         DisplayTint *displayTint = [DisplayTint new];
+        displayTint.overlayWindows = [NSMutableArray array];
         displayTint.selectedColor = [NSColor colorWithRed:0.58 green:0.46 blue:0.35 alpha:1];
         displayTint.tintIsEnabled = YES;
         
@@ -240,29 +276,24 @@ int main(int argc, const char * argv[]) {
                                    action:@selector(terminate:)
                             keyEquivalent:@"q"];
         
-        // Setup the overlay window
+        // Setup the overlay windows
         
-        NSWindow *overlayWindow = [[NSWindow alloc] initWithContentRect:NSZeroRect
-                                                              styleMask:0
-                                                                backing:NSBackingStoreBuffered
-                                                                  defer:NO];
-        overlayWindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
-        overlayWindow.level = CGShieldingWindowLevel();
-        overlayWindow.ignoresMouseEvents = YES;
-        overlayWindow.opaque = NO;
-        overlayWindow.alphaValue = 0.25;
-        overlayWindow.backgroundColor = displayTint.selectedColor;
-        overlayWindow.delegate = displayTint;
+        [displayTint createOverlayWindowsIfNeeded];
         
-        [overlayWindow setFrame:NSScreen.mainScreen.frame display:YES];
+        [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidChangeScreenParametersNotification
+                                                        object:nil
+                                                         queue:NSOperationQueue.mainQueue
+                                                    usingBlock:^(NSNotification * _Nonnull notification) {
+            [displayTint createOverlayWindowsIfNeeded];
+            [displayTint updateStateForOverlayWindows];
+        }];
         
-        // Give access to views and windows to the delegate
+        // Give access to views to the delegate
         
-        displayTint.overlayWindow = overlayWindow;
         displayTint.brightnessSlider = brightnessSlider;
         displayTint.tintImageView = tintImageView;
         
-        [displayTint updateOverlayState];
+        [displayTint updateStateForOverlayWindows];
         
         [app run];
     }
