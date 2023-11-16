@@ -80,7 +80,7 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
         return;
     }
     
-    NSRect screenFrame = NSScreen.mainScreen.visibleFrame;
+    NSRect screenFrame = NSScreen.mainScreen.frame;
     
     CGPoint newPoint = screenFrame.origin;
     CGSize newSize = screenFrame.size;
