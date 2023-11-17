@@ -6,7 +6,10 @@
 //
 
 #import <Cocoa/Cocoa.h>
-#import <IOKit/graphics/IOGraphicsLib.h>
+
+extern void DisplayServicesBrightnessChanged(CGDirectDisplayID id, double brightness);
+extern int DisplayServicesGetBrightness(CGDirectDisplayID id, float *brightness);
+extern int DisplayServicesSetBrightness(CGDirectDisplayID id, float brightness);
 
 @implementation NSMenu (Additions)
 - (CGFloat)stateColumnWidth {
@@ -132,52 +135,31 @@ NSInteger const kSetTintMenuItemTag = 101;
 }
 
 - (void)adjustBrightness:(NSSlider *)sender {
-    [self setDisplayBrightness:sender.floatValue];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self setDisplayBrightness:sender.floatValue];
+    });
 }
 
 // MARK: - Display brightness methods
 
 - (float)getDisplayBrightness {
     float brightness = 1.0f;
-    io_iterator_t iterator;
-    kern_return_t result =
-    IOServiceGetMatchingServices(kIOMasterPortDefault,
-                                 IOServiceMatching("IODisplayConnect"),
-                                 &iterator);
-    
-    if (result == kIOReturnSuccess) {
-        io_object_t service;
-        
-        while ((service = IOIteratorNext(iterator)) != MACH_PORT_NULL) {
-            IODisplayGetFloatParameter(service,
-                                       kNilOptions,
-                                       CFSTR(kIODisplayBrightnessKey),
-                                       &brightness);
-            
-            IOObjectRelease(service);
+    for (NSScreen *screen in NSScreen.screens) {
+        NSNumber *screenNumber = [screen.deviceDescription objectForKey:@"NSScreenNumber"];
+        CGDirectDisplayID display = screenNumber.unsignedIntValue;
+        if (DisplayServicesGetBrightness(display, &brightness) == KERN_SUCCESS) {
+            return brightness;
         }
     }
-    
     return brightness;
 }
 
 - (void)setDisplayBrightness:(float)brightness {
-    io_iterator_t iterator;
-    kern_return_t result =
-    IOServiceGetMatchingServices(kIOMasterPortDefault,
-                                 IOServiceMatching("IODisplayConnect"),
-                                 &iterator);
-    
-    if (result == kIOReturnSuccess) {
-        io_object_t service;
-        
-        while ((service = IOIteratorNext(iterator)) != MACH_PORT_NULL) {
-            IODisplaySetFloatParameter(service,
-                                       kNilOptions,
-                                       CFSTR(kIODisplayBrightnessKey),
-                                       brightness);
-            
-            IOObjectRelease(service);
+    for (NSScreen *screen in NSScreen.screens) {
+        NSNumber *screenNumber = [screen.deviceDescription objectForKey:@"NSScreenNumber"];
+        CGDirectDisplayID display = screenNumber.unsignedIntValue;
+        if (DisplayServicesSetBrightness(display, brightness) != KERN_SUCCESS) {
+            DisplayServicesBrightnessChanged(display, brightness);
         }
     }
 }
@@ -209,7 +191,7 @@ int main(int argc, const char * argv[]) {
         displayTint.selectedColor = [NSColor colorWithRed:0.58 green:0.46 blue:0.35 alpha:1];
         displayTint.tintIsEnabled = YES;
         
-        // Setup the menu
+        // Setup the menu.
         
         NSStatusItem *statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSSquareStatusItemLength];
         statusItem.button.image = [NSImage imageWithSystemSymbolName:@"photo.tv"
@@ -276,7 +258,7 @@ int main(int argc, const char * argv[]) {
                                    action:@selector(terminate:)
                             keyEquivalent:@"q"];
         
-        // Setup the overlay windows
+        // Setup the overlay windows.
         
         [displayTint createOverlayWindowsIfNeeded];
         
@@ -288,7 +270,7 @@ int main(int argc, const char * argv[]) {
             [displayTint updateStateForOverlayWindows];
         }];
         
-        // Give access to views to the delegate
+        // Give access to views to the delegate.
         
         displayTint.brightnessSlider = brightnessSlider;
         displayTint.tintImageView = tintImageView;
