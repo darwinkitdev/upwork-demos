@@ -158,7 +158,7 @@ NSInteger const kSetTintMenuItemTag = 101;
     for (NSScreen *screen in NSScreen.screens) {
         NSNumber *screenNumber = [screen.deviceDescription objectForKey:@"NSScreenNumber"];
         CGDirectDisplayID display = screenNumber.unsignedIntValue;
-        if (DisplayServicesSetBrightness(display, brightness) != KERN_SUCCESS) {
+        if (DisplayServicesSetBrightness(display, brightness) == KERN_SUCCESS) {
             DisplayServicesBrightnessChanged(display, brightness);
         }
     }
