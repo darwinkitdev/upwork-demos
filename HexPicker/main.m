@@ -113,10 +113,10 @@
 }
 
 - (CGImageRef)captureScreenAroundPoint:(NSPoint)point {
-    CGFloat screenHeight = self.window.screen.frame.size.height;
+    NSRect screenFrame = self.window.screen.frame;
     CGFloat size = self.numberOfPixels;
     CGFloat offset = size / 2;
-    NSRect captureRect = NSMakeRect(point.x - offset, screenHeight - point.y - offset, size, size);
+    NSRect captureRect = NSMakeRect(point.x - offset, screenFrame.size.height + screenFrame.origin.y - point.y - offset, size, size);
     CGWindowID excludingWindowID = (CGWindowID)self.window.windowNumber;
     return CGWindowListCreateImage(captureRect, kCGWindowListOptionOnScreenBelowWindow, excludingWindowID, kCGWindowImageBestResolution);
 }
@@ -204,17 +204,24 @@ NSUInteger const kMaxRecentColors = 10;
     MagnifierView *magView = [[MagnifierView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
     magView.numberOfPixels = 11;
     [window.contentView addSubview:magView];
+    [window setFrame:window.screen.frame display:YES];
     
     [window orderFrontRegardless];
     [NSApp activateIgnoringOtherApps:YES];
     [NSCursor hide];
     
     void (^updateMagnifier)(void) = ^void() {
-        if (!NSEqualRects(window.frame, window.screen.frame)) {
-            [window setFrame:window.screen.frame display:YES];
+        for (NSScreen *screen in NSScreen.screens) {
+            if (NSMouseInRect(NSEvent.mouseLocation, screen.frame, NO)) {
+                if (![window.screen isEqualTo:screen]) {
+                    [window setFrameOrigin:NSEvent.mouseLocation];
+                    [window setFrame:screen.frame display:YES];
+                }
+                break;
+            }
         }
         
-        NSPoint origin = NSEvent.mouseLocation;
+        NSPoint origin = window.mouseLocationOutsideOfEventStream;
         origin.x -= magView.frame.size.width / 2;
         origin.y -= magView.frame.size.height / 2;
         [magView setFrameOrigin:origin];
