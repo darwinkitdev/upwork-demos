@@ -80,6 +80,12 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
         return;
     }
     
+    NSRunningApplication *frontmostApp = NSWorkspace.sharedWorkspace.frontmostApplication;
+    AXUIElementRef app = AXUIElementCreateApplication(frontmostApp.processIdentifier);
+    
+    AXUIElementRef window;
+    AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute, (CFTypeRef *)&window);
+    
     NSRect screenFrame = NSScreen.mainScreen.frame;
     
     CGPoint newPoint = screenFrame.origin;
@@ -120,15 +126,17 @@ typedef NS_ENUM(NSInteger, WindowPosition) {
             newPoint.x += newSize.width;
             newPoint.y += newSize.height;
             break;
-        case WindowPositionCenter:
+        case WindowPositionCenter: {
+            AXValueRef size;
+            CGSize oldSize;
+            AXUIElementCopyAttributeValue(window, kAXSizeAttribute, (CFTypeRef *)&size);
+            AXValueGetValue(size, kAXValueTypeCGSize, &oldSize);
+            newSize = oldSize;
+            newPoint.x = (screenFrame.size.width - oldSize.width) / 2;
+            newPoint.y = (screenFrame.size.height - oldSize.height) / 2;
             break;
+        }
     }
-    
-    NSRunningApplication *frontmostApp = NSWorkspace.sharedWorkspace.frontmostApplication;
-    AXUIElementRef app = AXUIElementCreateApplication(frontmostApp.processIdentifier);
-    
-    AXUIElementRef window;
-    AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute, (CFTypeRef *)&window);
     
     AXValueRef position = AXValueCreate(kAXValueTypeCGPoint, &newPoint);
     AXUIElementSetAttributeValue(window, kAXPositionAttribute, position);
