@@ -44,7 +44,7 @@ int main(int argc, const char * argv[]) {
         LaunchAtLogin *launchAtLogin = [LaunchAtLogin new];
         
         NSStatusItem *statusItem = [NSStatusBar.systemStatusBar statusItemWithLength:NSVariableStatusItemLength];
-        statusItem.button.title = @"🚀";
+        statusItem.button.title = @"Modern";
         statusItem.menu = [NSMenu new];
         statusItem.menu.delegate = launchAtLogin;
         
