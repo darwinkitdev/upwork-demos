@@ -105,6 +105,8 @@
     [self.layer addSublayer:centerPixel];
     
     self.centerPixelCell = centerPixel;
+    
+    [self updatePreview];
 }
 
 - (NSColor *)pixelColorInImage:(CGImageRef)image atX:(int)x atY:(int)y {
@@ -118,7 +120,7 @@
     CGFloat offset = size / 2;
     NSRect captureRect = NSMakeRect(point.x - offset, screenFrame.size.height + screenFrame.origin.y - point.y - offset, size, size);
     CGWindowID excludingWindowID = (CGWindowID)self.window.windowNumber;
-    return CGWindowListCreateImage(captureRect, kCGWindowListOptionOnScreenBelowWindow, excludingWindowID, kCGWindowImageBestResolution);
+    return CGWindowListCreateImage(captureRect, kCGWindowListOptionOnScreenBelowWindow, excludingWindowID, kCGWindowImageNominalResolution);
 }
 
 - (void)updatePreview {
@@ -190,38 +192,36 @@ NSUInteger const kMaxRecentColors = 10;
     
     NSRunningApplication *previousActiveApp = NSWorkspace.sharedWorkspace.frontmostApplication;
     
-    NSWindow *window = [[NSWindow alloc] init];
-    window.styleMask = NSWindowStyleMaskBorderless | NSWindowStyleMaskFullSizeContentView;
-    window.level = NSStatusWindowLevel;
-    window.movable = NO;
-    window.movableByWindowBackground = NO;
-    window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
-    window.opaque = NO;
-    window.hasShadow = NO;
-    window.backgroundColor = NSColor.clearColor;
-    window.ignoresMouseEvents = NO;
+    NSWindow *overlayWindow = [[NSWindow alloc] init];
+    overlayWindow.styleMask = NSWindowStyleMaskBorderless | NSWindowStyleMaskFullSizeContentView;
+    overlayWindow.level = NSStatusWindowLevel;
+    overlayWindow.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary | NSWindowCollectionBehaviorStationary | NSWindowCollectionBehaviorIgnoresCycle;
+    overlayWindow.opaque = NO;
+    overlayWindow.hasShadow = NO;
+    overlayWindow.backgroundColor = NSColor.clearColor;
+    overlayWindow.acceptsMouseMovedEvents = YES;
     
     MagnifierView *magView = [[MagnifierView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
     magView.numberOfPixels = 11;
-    [window.contentView addSubview:magView];
-    [window setFrame:window.screen.frame display:YES];
+    [overlayWindow.contentView addSubview:magView];
+    [overlayWindow setFrame:overlayWindow.screen.frame display:YES];
     
-    [window orderFrontRegardless];
+    [overlayWindow orderFrontRegardless];
     [NSApp activateIgnoringOtherApps:YES];
     [NSCursor hide];
     
     void (^updateMagnifier)(void) = ^void() {
         for (NSScreen *screen in NSScreen.screens) {
             if (NSMouseInRect(NSEvent.mouseLocation, screen.frame, NO)) {
-                if (![window.screen isEqualTo:screen]) {
-                    [window setFrameOrigin:NSEvent.mouseLocation];
-                    [window setFrame:screen.frame display:YES];
+                if (![overlayWindow.screen isEqualTo:screen]) {
+                    [overlayWindow setFrameOrigin:NSEvent.mouseLocation];
+                    [overlayWindow setFrame:screen.frame display:YES];
                 }
                 break;
             }
         }
         
-        NSPoint origin = window.mouseLocationOutsideOfEventStream;
+        NSPoint origin = overlayWindow.mouseLocationOutsideOfEventStream;
         origin.x -= magView.frame.size.width / 2;
         origin.y -= magView.frame.size.height / 2;
         [magView setFrameOrigin:origin];
@@ -230,6 +230,13 @@ NSUInteger const kMaxRecentColors = 10;
     
     updateMagnifier();
     
+    id observation = [NSNotificationCenter.defaultCenter addObserverForName:NSApplicationDidResignActiveNotification
+                                                                     object:nil
+                                                                      queue:NSOperationQueue.mainQueue
+                                                                 usingBlock:^(NSNotification * _Nonnull notification) {
+        [NSApp activateIgnoringOtherApps:YES];
+    }];
+    
     self.eventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskMouseMoved | NSEventMaskLeftMouseUp | NSEventMaskKeyUp handler:^NSEvent * _Nullable(NSEvent * _Nonnull event) {
         if (event.type == NSEventTypeLeftMouseUp) {
             [self addRecentColor:magView.centerPixelColor];
@@ -237,10 +244,11 @@ NSUInteger const kMaxRecentColors = 10;
         
         if (event.type == NSEventTypeLeftMouseUp || (event.type == NSEventTypeKeyUp && event.keyCode == kVK_Escape)) {
             [NSCursor unhide];
-            [window orderOut:NSApp];
+            [overlayWindow orderOut:NSApp];
             [NSEvent removeMonitor:self.eventMonitor];
+            [NSNotificationCenter.defaultCenter removeObserver:observation];
             [previousActiveApp activateWithOptions:0];
-            return event;
+            return nil;
         }
         
         updateMagnifier();
